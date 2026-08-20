@@ -4,19 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abfahrtsmonitor</title>
-    <!-- Externe CSS-Datei -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <div class="board">
     <h2>Nächste Abfahrten</h2>
+    
+    <!-- NEU: Button für manuelle Standortsuche -->
+    <button id="update-location-btn" onclick="updateLocation()" style="margin-bottom: 1rem; padding: 0.5rem; background: #38bdf8; color: #0f172a; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">
+        📍 Standort neu suchen
+    </button>
+
     <div id="timetable" class="timetable-container">
         <div class="status-message">Lade Daten...</div>
     </div>
 </div>
 
-<!-- Externe JavaScript-Datei einbinden -->
 <script src="script.js"></script>
 
 </body>
