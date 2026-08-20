@@ -10,7 +10,11 @@
 <body>
 
 <div class="board">
-    <h2>Nächste Abfahrten</h2>
+    <div class="header-container">
+        <h2>Abfahrten</h2>
+        <button id="location-btn" onclick="fetchLocationBased()">📍 Standort nutzen</button>
+    </div>
+
     <div id="timetable" class="timetable-container">
         <div class="status-message">Lade Daten...</div>
     </div>
