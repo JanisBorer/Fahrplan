@@ -4,12 +4,12 @@
 const DESTINATION_NAME = "Kleinlützel"; 
 
 // ==========================================
-// HAUPTLOGIK MIT CACHING
+// HAUPTLOGIK MIT AUTOMATISCHER STANDORTABFRAGE
 // ==========================================
 function initApp() {
     const container = document.getElementById('timetable');
 
-    // 1. Sofort gespeicherte Haltestelle laden (falls vorhanden)
+    // 1. Sofort gespeicherte Haltestelle aus dem Cache laden (falls vorhanden)
     const cachedStation = localStorage.getItem('last_known_station');
     if (cachedStation) {
         fetchConnections(cachedStation);
@@ -24,11 +24,11 @@ function initApp() {
         return;
     }
 
-    // 2. Standort im Hintergrund abfragen (schnelle Einstellungen)
+    // 2. Standort direkt abfragen
     const geoOptions = {
-        enableHighAccuracy: false, // Nutzt Mobilfunk/WLAN -> blitzschnell
-        timeout: 5000,            // Max. 5 Sekunden warten
-        maximumAge: 300000        // Nutzt bis zu 5 Min. alte Standorte direkt
+        enableHighAccuracy: false, // WLAN/Mobilfunk statt GPS für schnellere Ergebnisse
+        timeout: 8000,            
+        maximumAge: 300000        // Bis zu 5 Min. alte Standorte akzeptieren
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -44,10 +44,9 @@ function initApp() {
                 const nearestStation = locData.stations.find(s => s.id !== null);
 
                 if (nearestStation) {
-                    // Haltestelle im Browser speichern
                     localStorage.setItem('last_known_station', nearestStation.name);
                     
-                    // Nur neu laden, wenn sich die Haltestelle geändert hat oder noch nichts angezeigt wird
+                    // Nur aktualisieren, wenn sich die Haltestelle geändert hat oder noch nichts angezeigt wird
                     if (nearestStation.name !== cachedStation) {
                         fetchConnections(nearestStation.name);
                     }
@@ -58,7 +57,6 @@ function initApp() {
         },
         (error) => {
             console.error("Standort-Fehler:", error.message);
-            // Falls gar nichts im Cache war und GPS fehlschlägt
             if (!cachedStation) {
                 container.innerHTML = `<div class="status-message">Standort konnte nicht geladen werden.</div>`;
             }
