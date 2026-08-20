@@ -2,18 +2,18 @@
 // KONFIGURATION
 // ==========================================
 const DEFAULT_STATION = "Kleinlützel, Frohmatt";
-const TARGET_DESTINATION = "Laufen";
+const ALLOWED_DESTINATIONS = ["Laufen", "Nunningen", "Breitenbach", "Erschwil", "Beinwil", "Büsserach"];
 const LIMIT = 40; 
 
 // ==========================================
-// 1. STANDARD: Kleinlützel -> Laufen
+// 1. STANDARD: Abfahrten ab Kleinlützel
 // ==========================================
 async function loadDefaultBoard() {
     const container = document.getElementById('timetable');
     const header = document.querySelector('.board h2');
     
     if (header) {
-        header.innerText = `Nach ${TARGET_DESTINATION}`;
+        header.innerText = `Ab ${DEFAULT_STATION}`;
     }
 
     const apiUrl = `https://transport.opendata.ch/v1/stationboard?station=${encodeURIComponent(DEFAULT_STATION)}&limit=${LIMIT}`;
@@ -24,14 +24,15 @@ async function loadDefaultBoard() {
         
         container.innerHTML = '';
 
-        // Nur Verbindungen rausfiltern, die Richtung Laufen fahren
+        // Filter für alle deine gewünschten Zielorte
         const filteredDepartures = data.stationboard.filter(item => {
             if (!item.to) return false;
-            return item.to.toLowerCase().includes(TARGET_DESTINATION.toLowerCase());
+            const dest = item.to.toLowerCase();
+            return ALLOWED_DESTINATIONS.some(target => dest.includes(target.toLowerCase()));
         });
 
         if (filteredDepartures.length === 0) {
-            container.innerHTML = `<div class="status-message">Keine Abfahrten nach ${TARGET_DESTINATION} gefunden.</div>`;
+            container.innerHTML = `<div class="status-message">Keine passenden Abfahrten gefunden.</div>`;
             return;
         }
 
@@ -56,7 +57,7 @@ async function loadDefaultBoard() {
 }
 
 // ==========================================
-// 2. STANDORT: Standort -> Kleinlützel (per Button)
+// 2. STANDORT: Erst bei Button-Klick ausführen
 // ==========================================
 function fetchLocationBased() {
     const container = document.getElementById('timetable');
@@ -68,13 +69,13 @@ function fetchLocationBased() {
 
     container.innerHTML = `<div class="status-message">Ermittle Standort...</div>`;
 
+    // Erst hier wird die Standortabfrage gestartet
     navigator.geolocation.getCurrentPosition(
         async (position) => {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
 
             try {
-                // Nächstgelegene Haltestelle finden
                 const locationUrl = `https://transport.opendata.ch/v1/locations?x=${lat}&y=${lon}&type=all`;
                 const locResponse = await fetch(locationUrl);
                 const locData = await locResponse.json();
@@ -86,7 +87,6 @@ function fetchLocationBased() {
                     return;
                 }
 
-                // Verbindungen vom Standort nach Kleinlützel suchen
                 fetchConnectionsToKleinlutzel(nearestStation.name);
 
             } catch (error) {
@@ -153,5 +153,5 @@ async function fetchConnectionsToKleinlutzel(fromStation) {
     }
 }
 
-// Sofort beim Laden die Standardbusse nach Laufen anzeigen
+// Beim Start nur die gewohnten Abfahrten laden
 loadDefaultBoard();
