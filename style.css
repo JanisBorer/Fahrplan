@@ -1,126 +1,109 @@
-// ==========================================
-// KONFIGURATION
-// ==========================================
-const DESTINATION_NAME = "Kleinlützel"; 
-
-// ==========================================
-// HAUPTLOGIK
-// ==========================================
-function initApp() {
-    const cachedStation = localStorage.getItem('last_known_station');
-    
-    // Wenn eine Haltestelle gespeichert ist, SOFORT laden und GPS ignorieren
-    if (cachedStation) {
-        fetchConnections(cachedStation);
-    } else {
-        // Nur beim allerersten Besuch GPS abfragen
-        updateLocation();
-    }
+/* ==========================================
+   GLOBALES DESIGN & WRAPPER
+   ========================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-// Wird nur aufgerufen, wenn kein Cache da ist oder der Button gedrückt wird
-function updateLocation() {
-    const container = document.getElementById('timetable');
-
-    if (!("geolocation" in navigator)) {
-        container.innerHTML = `<div class="status-message">Geolocation wird nicht unterstützt.</div>`;
-        return;
-    }
-
-    container.innerHTML = `<div class="status-message">Suche genauen Standort...</div>`;
-
-    const geoOptions = {
-        enableHighAccuracy: false, 
-        timeout: 8000,            
-        maximumAge: 60000        
-    };
-
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-
-            try {
-                const locationUrl = `https://transport.opendata.ch/v1/locations?x=${lat}&y=${lon}&type=all`;
-                const locResponse = await fetch(locationUrl);
-                const locData = await locResponse.json();
-
-                const nearestStation = locData.stations.find(s => s.id !== null);
-
-                if (nearestStation) {
-                    localStorage.setItem('last_known_station', nearestStation.name);
-                    fetchConnections(nearestStation.name);
-                } else {
-                    container.innerHTML = `<div class="status-message">Keine Haltestelle in der Nähe gefunden.</div>`;
-                }
-            } catch (error) {
-                console.error("Fehler beim Abrufen des Standorts:", error);
-            }
-        },
-        (error) => {
-            console.error("Standort-Fehler:", error.message);
-            const cachedStation = localStorage.getItem('last_known_station');
-            if (cachedStation) {
-                // Bei Fehler auf alten Cache zurückfallen
-                fetchConnections(cachedStation);
-            } else {
-                container.innerHTML = `<div class="status-message">Standort konnte nicht geladen werden.</div>`;
-            }
-        },
-        geoOptions
-    );
+body {
+    background-color: #0b1120;
+    color: #f8fafc;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
 }
 
-async function fetchConnections(fromStation) {
-    const container = document.getElementById('timetable');
-    
-    // Optisches Feedback, dass Daten von der API geladen werden
-    container.innerHTML = `<div class="status-message">Lade Fahrplan ab ${fromStation}...</div>`;
-
-    const connUrl = `https://transport.opendata.ch/v1/connections?from=${encodeURIComponent(fromStation)}&to=${encodeURIComponent(DESTINATION_NAME)}&limit=5`;
-
-    try {
-        const response = await fetch(connUrl);
-        const data = await response.json();
-
-        container.innerHTML = '';
-
-        if (!data.connections || data.connections.length === 0) {
-            container.innerHTML = `<div class="status-message">Keine Verbindungen nach ${DESTINATION_NAME} gefunden.</div>`;
-            return;
-        }
-
-        const header = document.querySelector('.board h2');
-        if (header) {
-            header.innerText = `Ab ${fromStation}`;
-        }
-
-        data.connections.forEach(conn => {
-            const departureTime = conn.from.departure.split('T')[1].substring(0, 5);
-            const arrivalTime = conn.to.arrival.split('T')[1].substring(0, 5);
-            
-            const firstSection = conn.sections[0];
-            const line = firstSection && firstSection.journey 
-                ? `${firstSection.journey.category}${firstSection.journey.number || ''}` 
-                : 'Zug/Bus';
-
-            const destination = conn.to.station.name;
-
-            const row = document.createElement('div');
-            row.className = 'row';
-            row.innerHTML = `
-                <span class="line">${line}</span>
-                <span class="destination">nach ${destination} (${arrivalTime})</span>
-                <span class="time">${departureTime}</span>
-            `;
-            container.appendChild(row);
-        });
-
-    } catch (error) {
-        console.error('Fehler beim Laden der Verbindungen:', error);
-        container.innerHTML = `<div class="status-message">Fehler beim Laden der Verbindungen.</div>`;
-    }
+/* ==========================================
+   ANZEIGE-BOARD (CARD)
+   ========================================== */
+.board {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
 }
 
-// App sofort starten
-initApp();
+.board h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #38bdf8;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #334155;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* ==========================================
+   FAHRPLAN-CONTAINER & ZEILEN
+   ========================================== */
+.timetable-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #0f172a;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border-left: 4px solid #38bdf8;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.row:hover {
+    background-color: #1a233a;
+    transform: translateX(3px);
+}
+
+/* Bus-/Zuglinie Badge */
+.line {
+    background-color: #0284c7;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* Zielort & Ankunftszeit */
+.destination {
+    flex: 1;
+    margin: 0 14px;
+    font-size: 0.95rem;
+    color: #e2e8f0;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Abfahrtszeit */
+.time {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #38bdf8;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Status- / Lade-Meldungen */
+.status-message {
+    text-align: center;
+    padding: 24px 12px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+    font-style: italic;
+}
