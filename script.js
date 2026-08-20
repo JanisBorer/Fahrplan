@@ -16,6 +16,7 @@ async function loadDefaultBoard() {
         header.innerText = `Ab ${DEFAULT_STATION}`;
     }
 
+    // WICHTIG: Keine Einschränkung auf "to" in der URL, damit alle Richtungen von der API geliefert werden
     const apiUrl = `https://transport.opendata.ch/v1/stationboard?station=${encodeURIComponent(DEFAULT_STATION)}&limit=${LIMIT}`;
 
     try {
@@ -24,7 +25,12 @@ async function loadDefaultBoard() {
         
         container.innerHTML = '';
 
-        // Filter für alle deine gewünschten Zielorte
+        if (!data.stationboard || data.stationboard.length === 0) {
+            container.innerHTML = `<div class="status-message">Keine Abfahrten gefunden.</div>`;
+            return;
+        }
+
+        // Gefiltert wird erst hier im Code für alle gewünschten Zielorte
         const filteredDepartures = data.stationboard.filter(item => {
             if (!item.to) return false;
             const dest = item.to.toLowerCase();
@@ -69,7 +75,6 @@ function fetchLocationBased() {
 
     container.innerHTML = `<div class="status-message">Ermittle Standort...</div>`;
 
-    // Erst hier wird die Standortabfrage gestartet
     navigator.geolocation.getCurrentPosition(
         async (position) => {
             const lat = position.coords.latitude;
@@ -153,5 +158,5 @@ async function fetchConnectionsToKleinlutzel(fromStation) {
     }
 }
 
-// Beim Start nur die gewohnten Abfahrten laden
+// Beim Aufruf sofort die Standardabfahrten laden
 loadDefaultBoard();
