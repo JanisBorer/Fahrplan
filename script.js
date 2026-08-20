@@ -1,19 +1,19 @@
 // ==========================================
 // KONFIGURATION
 // ==========================================
-const DEFAULT_STATION = "Kleinlützel, Frohmatt"; 
-const ALLOWED_DESTINATIONS = ["Laufen", "Nunningen", "Breitenbach"]; 
+const DEFAULT_STATION = "Kleinlützel, Frohmatt";
+const TARGET_DESTINATION = "Laufen";
 const LIMIT = 40; 
 
 // ==========================================
-// STANDARD-LOGIK (Kleinlützel -> Laufen/Nunningen)
+// 1. STANDARD: Kleinlützel -> Laufen
 // ==========================================
 async function loadDefaultBoard() {
     const container = document.getElementById('timetable');
     const header = document.querySelector('.board h2');
     
     if (header) {
-        header.innerText = `Ab ${DEFAULT_STATION}`;
+        header.innerText = `Nach ${TARGET_DESTINATION}`;
     }
 
     const apiUrl = `https://transport.opendata.ch/v1/stationboard?station=${encodeURIComponent(DEFAULT_STATION)}&limit=${LIMIT}`;
@@ -24,14 +24,14 @@ async function loadDefaultBoard() {
         
         container.innerHTML = '';
 
+        // Nur Verbindungen rausfiltern, die Richtung Laufen fahren
         const filteredDepartures = data.stationboard.filter(item => {
             if (!item.to) return false;
-            const dest = item.to.toLowerCase();
-            return ALLOWED_DESTINATIONS.some(target => dest.includes(target.toLowerCase()));
+            return item.to.toLowerCase().includes(TARGET_DESTINATION.toLowerCase());
         });
 
         if (filteredDepartures.length === 0) {
-            container.innerHTML = `<div class="status-message">Keine Abfahrten gefunden.</div>`;
+            container.innerHTML = `<div class="status-message">Keine Abfahrten nach ${TARGET_DESTINATION} gefunden.</div>`;
             return;
         }
 
@@ -56,7 +56,7 @@ async function loadDefaultBoard() {
 }
 
 // ==========================================
-// STANDORT-LOGIK (Wird nur per Button ausgelöst)
+// 2. STANDORT: Standort -> Kleinlützel (per Button)
 // ==========================================
 function fetchLocationBased() {
     const container = document.getElementById('timetable');
@@ -86,8 +86,8 @@ function fetchLocationBased() {
                     return;
                 }
 
-                // Verbindungen nach Kleinlützel suchen
-                fetchConnectionsToDestination(nearestStation.name);
+                // Verbindungen vom Standort nach Kleinlützel suchen
+                fetchConnectionsToKleinlutzel(nearestStation.name);
 
             } catch (error) {
                 console.error("Fehler beim Abrufen des Standorts:", error);
@@ -97,13 +97,13 @@ function fetchLocationBased() {
         (error) => {
             console.error("Standort-Fehler:", error.message);
             alert("Standort konnte nicht ermittelt werden. Bitte Zugriff erlauben.");
-            loadDefaultBoard(); // Bei Abbruch zurück zum Standard
+            loadDefaultBoard();
         },
         { enableHighAccuracy: false, timeout: 8000 }
     );
 }
 
-async function fetchConnectionsToDestination(fromStation) {
+async function fetchConnectionsToKleinlutzel(fromStation) {
     const container = document.getElementById('timetable');
     const header = document.querySelector('.board h2');
 
@@ -153,5 +153,5 @@ async function fetchConnectionsToDestination(fromStation) {
     }
 }
 
-// Beim Aufruf sofort die Standard-Abfahrten laden
+// Sofort beim Laden die Standardbusse nach Laufen anzeigen
 loadDefaultBoard();
