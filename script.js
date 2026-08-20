@@ -4,17 +4,32 @@
 const DESTINATION_NAME = "Kleinlützel"; 
 
 // ==========================================
-// HAUPTLOGIK
+// HAUPTLOGIK MIT CACHING
 // ==========================================
 function initApp() {
     const container = document.getElementById('timetable');
 
+    // 1. Sofort gespeicherte Haltestelle laden (falls vorhanden)
+    const cachedStation = localStorage.getItem('last_known_station');
+    if (cachedStation) {
+        fetchConnections(cachedStation);
+    } else {
+        container.innerHTML = `<div class="status-message">Standort wird ermittelt...</div>`;
+    }
+
     if (!("geolocation" in navigator)) {
-        container.innerHTML = `<div class="status-message">Geolocation wird nicht unterstützt.</div>`;
+        if (!cachedStation) {
+            container.innerHTML = `<div class="status-message">Geolocation wird nicht unterstützt.</div>`;
+        }
         return;
     }
 
-    container.innerHTML = `<div class="status-message">Standort wird ermittelt...</div>`;
+    // 2. Standort im Hintergrund abfragen (schnelle Einstellungen)
+    const geoOptions = {
+        enableHighAccuracy: false, // Nutzt Mobilfunk/WLAN -> blitzschnell
+        timeout: 5000,            // Max. 5 Sekunden warten
+        maximumAge: 300000        // Nutzt bis zu 5 Min. alte Standorte direkt
+    };
 
     navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -22,39 +37,38 @@ function initApp() {
             const lon = position.coords.longitude;
 
             try {
-                // 1. Nächstgelegene Haltestelle über Koordinaten finden
                 const locationUrl = `https://transport.opendata.ch/v1/locations?x=${lat}&y=${lon}&type=all`;
                 const locResponse = await fetch(locationUrl);
                 const locData = await locResponse.json();
 
-                // Ersten gültigen Stopp filtern
                 const nearestStation = locData.stations.find(s => s.id !== null);
 
-                if (!nearestStation) {
-                    container.innerHTML = `<div class="status-message">Keine Haltestelle in der Nähe gefunden.</div>`;
-                    return;
+                if (nearestStation) {
+                    // Haltestelle im Browser speichern
+                    localStorage.setItem('last_known_station', nearestStation.name);
+                    
+                    // Nur neu laden, wenn sich die Haltestelle geändert hat oder noch nichts angezeigt wird
+                    if (nearestStation.name !== cachedStation) {
+                        fetchConnections(nearestStation.name);
+                    }
                 }
-
-                console.log(`Nächste Haltestelle: ${nearestStation.name}`);
-
-                // 2. Verbindungen von der Start-Haltestelle nach Kleinlützel abfragen
-                fetchConnections(nearestStation.name);
-
             } catch (error) {
                 console.error("Fehler beim Abrufen des Standorts:", error);
-                container.innerHTML = `<div class="status-message">Fehler bei der Standortsuche.</div>`;
             }
         },
         (error) => {
-            console.error("Standortzugriff abgelehnt:", error.message);
-            container.innerHTML = `<div class="status-message">Standortzugriff erforderlich.</div>`;
-        }
+            console.error("Standort-Fehler:", error.message);
+            // Falls gar nichts im Cache war und GPS fehlschlägt
+            if (!cachedStation) {
+                container.innerHTML = `<div class="status-message">Standort konnte nicht geladen werden.</div>`;
+            }
+        },
+        geoOptions
     );
 }
 
 async function fetchConnections(fromStation) {
     const container = document.getElementById('timetable');
-    container.innerHTML = `<div class="status-message">Suche Verbindungen ab ${fromStation}...</div>`;
 
     const connUrl = `https://transport.opendata.ch/v1/connections?from=${encodeURIComponent(fromStation)}&to=${encodeURIComponent(DESTINATION_NAME)}&limit=5`;
 
@@ -69,18 +83,15 @@ async function fetchConnections(fromStation) {
             return;
         }
 
-        // Titelelement anpassen/anzeigen, von wo gesucht wird
         const header = document.querySelector('.board h2');
         if (header) {
             header.innerText = `Ab ${fromStation}`;
         }
 
-        // Verbindungen auflisten
         data.connections.forEach(conn => {
             const departureTime = conn.from.departure.split('T')[1].substring(0, 5);
             const arrivalTime = conn.to.arrival.split('T')[1].substring(0, 5);
             
-            // Erstes Verkehrsmittel der Route holen (z.B. B 112 oder IR 56)
             const firstSection = conn.sections[0];
             const line = firstSection && firstSection.journey 
                 ? `${firstSection.journey.category}${firstSection.journey.number || ''}` 
