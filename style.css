@@ -31,16 +31,47 @@ body {
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
 }
 
-.board h2 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #38bdf8;
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
     margin-bottom: 16px;
     padding-bottom: 10px;
     border-bottom: 2px solid #334155;
+    flex-wrap: wrap;
+}
+
+.board h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #38bdf8;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     word-break: break-word;
+}
+
+/* Standort-Button */
+#location-btn {
+    background-color: #38bdf8;
+    color: #0f172a;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+    white-space: nowrap;
+}
+
+#location-btn:hover {
+    background-color: #0284c7;
+    color: #ffffff;
+}
+
+#location-btn:active {
+    transform: scale(0.96);
 }
 
 /* ==========================================
@@ -56,7 +87,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap; /* Erlaubt Umbruch bei sehr kleinen Displays */
+    flex-wrap: wrap;
     gap: 8px 12px;
     background-color: #0f172a;
     padding: 12px 14px;
@@ -79,7 +110,7 @@ body {
 /* Zielort & Ankunftszeit */
 .destination {
     flex: 1;
-    min-width: 140px; /* Garantiert genug Platz für den Text */
+    min-width: 130px;
     font-size: 0.9rem;
     color: #e2e8f0;
     font-weight: 500;
@@ -92,7 +123,7 @@ body {
     font-weight: 700;
     color: #38bdf8;
     font-variant-numeric: tabular-nums;
-    margin-left: auto; /* Schiebt die Zeit immer nach rechts */
+    margin-left: auto;
 }
 
 /* Status- / Lade-Meldungen */
@@ -105,7 +136,7 @@ body {
 }
 
 /* ==========================================
-   ANPASSUNGEN FÜR KLEINE DISPLAYs (< 380px)
+   ANPASSUNGEN FÜR KLEINE DISPLAYS (< 380px)
    ========================================== */
 @media (max-width: 380px) {
     .board {
